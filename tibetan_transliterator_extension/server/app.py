@@ -1,19 +1,25 @@
 from flask import Flask, request, jsonify
-from pyewts import pyewts
 from flask_cors import CORS
+from transformers import pipeline
 
 app = Flask(__name__)
 CORS(app)
-converter = pyewts()
+
+# Load the Hugging Face transliteration model
+transliterator = pipeline('translation', model='billingsmoore/tibetan-phonetic-transliteration')
 
 @app.route('/transliterate', methods=['POST'])
 def transliterate():
     try:
         data = request.json
         tibetan_text = data.get('text', '')
-        if tibetan_text == '':
+        if not tibetan_text:
             return jsonify({'error': 'No Tibetan text provided'}), 400
-        transliterated_text = converter.toWylie(tibetan_text)
+        
+        # Use the Hugging Face model for transliteration
+        result = transliterator(tibetan_text)
+        transliterated_text = result[0]['translation_text']
+        
         return jsonify({'transliteration': transliterated_text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
